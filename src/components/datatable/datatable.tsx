@@ -1,6 +1,5 @@
 import React from 'react';
-import clsx from 'clsx';
-import { createStyles, lighten, makeStyles, Theme } from '@material-ui/core/styles';
+import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -116,6 +115,7 @@ const useStyles = makeStyles((theme: Theme) =>
 interface EnhancedTableProps {
   columns: TableHeadCell[];
   rows: MarketData[];
+  pagination: boolean;
 }
 
 export default function EnhancedTable(props: EnhancedTableProps) {
@@ -124,7 +124,7 @@ export default function EnhancedTable(props: EnhancedTableProps) {
   const [orderBy, setOrderBy] = React.useState<keyof MarketData>('pair');
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-  const { rows, columns } = props;
+  const { rows, columns, pagination } = props;
 
   const handleRequestSort = (event: React.MouseEvent<unknown>, property: keyof MarketData) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -141,8 +141,6 @@ export default function EnhancedTable(props: EnhancedTableProps) {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
-
-  const emptyRows = rowsPerPage - Math.min(rowsPerPage, rows.length - page * rowsPerPage);
 
   return (
     <div className={classes.root}>
@@ -162,31 +160,39 @@ export default function EnhancedTable(props: EnhancedTableProps) {
               onRequestSort={handleRequestSort}
             />
             <TableBody>
-              {stableSort(rows, getComparator(order, orderBy))
+              { pagination && stableSort(rows, getComparator(order, orderBy))
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row, index) => {
-                  
-                  const labelId = `enhanced-table-checkbox-${index}`;
-
                   return (
                     <TableRow
                       hover
                       tabIndex={-1}
-                      key={row.pair}
+                      key={`row_${index}`}
                     >
-                      <TableCell align="right">{row.pair}</TableCell>
-                      <TableCell align="right">{row.last_price}</TableCell>
-                      <TableCell align="right">{row.change}</TableCell>
-                      <TableCell align="right">{row.high}</TableCell>
-                      <TableCell align="right">{row.vol_24h}</TableCell>
-                      <TableCell align="right">{row.turnover_24h}</TableCell>
+                      {columns.map((column) => (
+                        <TableCell align="right">{row[column.id]}</TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })}
+                { !pagination && stableSort(rows, getComparator(order, orderBy))
+                .map((row, index) => {
+                  return (
+                    <TableRow
+                      hover
+                      tabIndex={-1}
+                      key={`row_${index}`}
+                    >
+                      {columns.map((column) => (
+                        <TableCell align="right">{row[column.id]}</TableCell>
+                      ))}
                     </TableRow>
                   );
                 })}
             </TableBody>
           </Table>
         </TableContainer>
-        <TablePagination
+        {pagination && (<TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
           count={rows.length}
@@ -194,7 +200,7 @@ export default function EnhancedTable(props: EnhancedTableProps) {
           page={page}
           onChangePage={handleChangePage}
           onChangeRowsPerPage={handleChangeRowsPerPage}
-        />
+        />)}
       </Paper>
     </div>
   );

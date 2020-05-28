@@ -102,36 +102,42 @@ export default function Markets() {
 					<EnhancedTable
 						columns={headCells}
 						rows={[]}
+						pagination={false}
 					/>
         </TabPanel>
         <TabPanel value={value} index={1} dir={theme.direction}>
 					<EnhancedTable
 						columns={headCells}
 						rows={[]}
+						pagination={false}
 					/>
         </TabPanel>
         <TabPanel value={value} index={2} dir={theme.direction}>
 					<EnhancedTable
 						columns={headCells}
 						rows={[]}
+						pagination={false}
 					/>
         </TabPanel>
         <TabPanel value={value} index={3} dir={theme.direction}>
 					<EnhancedTable
 						columns={headCells}
 						rows={[]}
+						pagination={false}
 					/>
         </TabPanel>
         <TabPanel value={value} index={4} dir={theme.direction}>
 					<EnhancedTable
 						columns={headCells}
 						rows={[]}
+						pagination={false}
 					/>
         </TabPanel>
         <TabPanel value={value} index={5} dir={theme.direction}>
 					<EnhancedTable
 						columns={headCells}
 						rows={[]}
+						pagination={false}
 					/>
         </TabPanel>
       </SwipeableViews>

@@ -118,7 +118,7 @@ export default function Markets() {
         return markets.find((item: { symbol: string }) => item.symbol === symbol);
       });
 
-      setMarkets(newMarkets as any[]);
+      setMarkets(newMarkets as never[]);
     }
   };
 

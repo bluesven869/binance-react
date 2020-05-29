@@ -121,7 +121,7 @@ interface EnhancedTableProps {
 export default function EnhancedTable(props: EnhancedTableProps) {
   const classes = useStyles();
   const [order, setOrder] = React.useState<Order>('asc');
-  const [orderBy, setOrderBy] = React.useState<keyof MarketData>('pair');
+  const [orderBy, setOrderBy] = React.useState<keyof MarketData>('symbol');
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const { rows, columns, pagination } = props;

@@ -1,24 +1,24 @@
 import React from 'react';
 import SwipeableViews from 'react-swipeable-views';
+import pako from 'pako';
 import { makeStyles, Theme, useTheme } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
-import { TableHeadCell } from '../../interfaces/datatable';
+import { TableHeadCell, MarketData } from '../../interfaces/datatable';
 import EnhancedTable from '../../components/datatable/datatable';
 
 const headCells: TableHeadCell[] = [
-  { id: 'pair', numeric: false, disablePadding: false, label: 'Pair' },
-	{ id: 'last_price', numeric: true, disablePadding: false, label: 'Last Price' },
-	{ id: 'change', numeric: true, disablePadding: false, label: 'Change' },
-  { id: 'high', numeric: true, disablePadding: false, label: 'High' },
-  { id: 'low', numeric: true, disablePadding: false, label: 'Low' },
-	{ id: 'vol_24h', numeric: true, disablePadding: false, label: '24H Vol' },
-	{ id: 'turnover_24h', numeric: true, disablePadding: false, label: '24H Turnover' },
+  { id: 'symbol', numeric: false, disablePadding: false, label: 'Pair' },
+  { id: 'open', numeric: true, disablePadding: false, label: 'Last Price' },
+  { id: 'high', numeric: true, disablePadding: false, label: 'Change' },
+  { id: 'low', numeric: true, disablePadding: false, label: 'High' },
+  { id: 'close', numeric: true, disablePadding: false, label: 'Low' },
+  { id: 'amount', numeric: true, disablePadding: false, label: '24H Vol' },
+  { id: 'vol', numeric: true, disablePadding: false, label: '24H Turnover' },
 ];
-
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -39,7 +39,7 @@ function TabPanel(props: TabPanelProps) {
       {...other}
     >
       {value === index && (
-        <Box p={3}>
+        <Box p={0}>
           <Typography>{children}</Typography>
         </Box>
       )}
@@ -65,6 +65,62 @@ export default function Markets() {
   const classes = useStyles();
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
+  const [markets, setMarkets] = React.useState([]);
+  let socket: WebSocket;
+  React.useEffect(() => {
+    socket = new WebSocket("wss://api.huobiasia.vip/ws");
+    socket.binaryType = "arraybuffer";
+
+    socket.onopen = (event) => {
+      socket.send('{"sub":"market.overview"}');
+    };
+
+    socket.onmessage = (event) => {
+      if (event.data instanceof ArrayBuffer) {
+        const u8Arr = new Uint8Array(event.data);
+        const str = String.fromCharCode.apply(null, Array.from(pako.inflate(u8Arr)));
+        processMessage(JSON.parse(str));
+
+      } else {
+        console.log("String");
+      }
+    };
+
+    socket.onclose = (event) => {
+      if (event.wasClean) {
+        console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+      } else {
+        console.log('[close] Connection died');
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.log(error);
+    };
+  });
+
+  const processMessage = (message: any) => {
+    console.log(message);
+    if (message.ping) {
+      socket.send(JSON.stringify({ pong: message.ping }));
+      return;
+    }
+
+    if (message.ch === "market.overview") {
+
+      const old_symbols = markets.map((item: { symbol: string }) => item.symbol);
+      const new_symbols = message.data.map((item: { symbol: string }) => item.symbol);
+      const merged_symbols = [...old_symbols, new_symbols];
+      const newMarkets = merged_symbols.map(symbol => {
+        if (new_symbols.indexOf(symbol) >= 0) {
+          return message.data.find((item: { symbol: string }) => item.symbol === symbol);
+        }
+        return markets.find((item: { symbol: string }) => item.symbol === symbol);
+      });
+
+      setMarkets(newMarkets as any[]);
+    }
+  };
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setValue(newValue);
@@ -73,6 +129,7 @@ export default function Markets() {
   const handleChangeIndex = (index: number) => {
     setValue(index);
   };
+
 
   return (
     <div className={classes.root}>
@@ -99,46 +156,48 @@ export default function Markets() {
         onChangeIndex={handleChangeIndex}
       >
         <TabPanel value={value} index={0} dir={theme.direction}>
-					<EnhancedTable
-						columns={headCells}
-						rows={[]}
-						pagination={false}
-					/>
+          <div>
+            <EnhancedTable
+              columns={headCells}
+              rows={markets}
+              pagination={false}
+            />
+          </div>
         </TabPanel>
         <TabPanel value={value} index={1} dir={theme.direction}>
-					<EnhancedTable
-						columns={headCells}
-						rows={[]}
-						pagination={false}
-					/>
+          <EnhancedTable
+            columns={headCells}
+            rows={[]}
+            pagination={false}
+          />
         </TabPanel>
         <TabPanel value={value} index={2} dir={theme.direction}>
-					<EnhancedTable
-						columns={headCells}
-						rows={[]}
-						pagination={false}
-					/>
+          <EnhancedTable
+            columns={headCells}
+            rows={[]}
+            pagination={false}
+          />
         </TabPanel>
         <TabPanel value={value} index={3} dir={theme.direction}>
-					<EnhancedTable
-						columns={headCells}
-						rows={[]}
-						pagination={false}
-					/>
+          <EnhancedTable
+            columns={headCells}
+            rows={[]}
+            pagination={false}
+          />
         </TabPanel>
         <TabPanel value={value} index={4} dir={theme.direction}>
-					<EnhancedTable
-						columns={headCells}
-						rows={[]}
-						pagination={false}
-					/>
+          <EnhancedTable
+            columns={headCells}
+            rows={[]}
+            pagination={false}
+          />
         </TabPanel>
         <TabPanel value={value} index={5} dir={theme.direction}>
-					<EnhancedTable
-						columns={headCells}
-						rows={[]}
-						pagination={false}
-					/>
+          <EnhancedTable
+            columns={headCells}
+            rows={[]}
+            pagination={false}
+          />
         </TabPanel>
       </SwipeableViews>
     </div>

@@ -1,11 +1,12 @@
 export interface MarketData {
-    pair: string;
-    last_price: number;
-    change: number;
+    symbol: string;
+    open: number;
     high: number;
     low: number;
-    vol_24h: number;
-    turnover_24h: number;
+    close: number;
+    amount: number;
+    vol: number;
+    count: number;
 }
   
 export interface TableHeadCell {

@@ -183,8 +183,8 @@ export default function EnhancedTable(props: EnhancedTableProps) {
                       tabIndex={-1}
                       key={`row_${index}`}
                     >
-                      {columns.map((column) => (
-                        <TableCell align="right">{row[column.id]}</TableCell>
+                      {columns.map((column, col_index) => (
+                        <TableCell align="right" key={`col-${index}_${col_index}`}>{row[column.id]}</TableCell>
                       ))}
                     </TableRow>
                   );

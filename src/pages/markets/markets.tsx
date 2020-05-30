@@ -1,6 +1,7 @@
 import React from 'react';
+import { connect } from 'react-redux';
+
 import SwipeableViews from 'react-swipeable-views';
-import pako from 'pako';
 import { makeStyles, Theme, useTheme } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
@@ -9,13 +10,14 @@ import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import { TableHeadCell, MarketData } from '../../interfaces/datatable';
 import EnhancedTable from '../../components/datatable/datatable';
+import { fetchSymbols } from '../../actions/market';
 
 const headCells: TableHeadCell[] = [
   { id: 'symbol', numeric: false, disablePadding: false, label: 'Pair' },
-  { id: 'open', numeric: true, disablePadding: false, label: 'Last Price' },
-  { id: 'high', numeric: true, disablePadding: false, label: 'Change' },
-  { id: 'low', numeric: true, disablePadding: false, label: 'High' },
-  { id: 'close', numeric: true, disablePadding: false, label: 'Low' },
+  { id: 'close', numeric: true, disablePadding: false, label: 'Last Price' },
+  { id: 'change', numeric: true, disablePadding: false, label: 'Change' },
+  { id: 'high', numeric: true, disablePadding: false, label: 'High' },
+  { id: 'low', numeric: true, disablePadding: false, label: 'Low' },
   { id: 'amount', numeric: true, disablePadding: false, label: '24H Vol' },
   { id: 'vol', numeric: true, disablePadding: false, label: '24H Turnover' },
 ];
@@ -61,66 +63,11 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
 }));
 
-export default function Markets() {
+const Markets = (props: any) => {
   const classes = useStyles();
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
-  const [markets, setMarkets] = React.useState([]);
-  let socket: WebSocket;
-  React.useEffect(() => {
-    socket = new WebSocket("wss://api.huobiasia.vip/ws");
-    socket.binaryType = "arraybuffer";
-
-    socket.onopen = (event) => {
-      socket.send('{"sub":"market.overview"}');
-    };
-
-    socket.onmessage = (event) => {
-      if (event.data instanceof ArrayBuffer) {
-        const u8Arr = new Uint8Array(event.data);
-        const str = String.fromCharCode.apply(null, Array.from(pako.inflate(u8Arr)));
-        processMessage(JSON.parse(str));
-
-      } else {
-        console.log("String");
-      }
-    };
-
-    socket.onclose = (event) => {
-      if (event.wasClean) {
-        console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
-      } else {
-        console.log('[close] Connection died');
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.log(error);
-    };
-  });
-
-  const processMessage = (message: any) => {
-    console.log(message);
-    if (message.ping) {
-      socket.send(JSON.stringify({ pong: message.ping }));
-      return;
-    }
-
-    if (message.ch === "market.overview") {
-
-      const old_symbols = markets.map((item: { symbol: string }) => item.symbol);
-      const new_symbols = message.data.map((item: { symbol: string }) => item.symbol);
-      const merged_symbols = [...old_symbols, new_symbols];
-      const newMarkets = merged_symbols.map(symbol => {
-        if (new_symbols.indexOf(symbol) >= 0) {
-          return message.data.find((item: { symbol: string }) => item.symbol === symbol);
-        }
-        return markets.find((item: { symbol: string }) => item.symbol === symbol);
-      });
-
-      setMarkets(newMarkets as never[]);
-    }
-  };
+  const { markets, symbols } = props;
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setValue(newValue);
@@ -130,76 +77,101 @@ export default function Markets() {
     setValue(index);
   };
 
+  const getMarkets = (quoteCurrency: string) => {
+    const symbol_codes = symbols.filter((symbol: { quote_currency: string; }) => symbol.quote_currency === quoteCurrency)
+      .map((symbol: { symbol_code: string; }) => symbol.symbol_code);
+    return markets.filter((market_data: MarketData) => symbol_codes.indexOf(market_data.symbol) >= 0)
+      .map((market_data: MarketData)=>({
+        ...market_data,
+        symbol: symbols.filter((symbol: {symbol_code: string; base_currency: string;}) => symbol.symbol_code ===market_data.symbol)[0].base_currency.toUpperCase(),
+      }));
+    
+  };
 
-  return (
-    <div className={classes.root}>
-      <AppBar position="static" color="default">
-        <Tabs
-          value={value}
-          onChange={handleChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-          aria-label="full width tabs example"
-        >
-          <Tab label="USDT" {...a11yProps(0)} />
-          <Tab label="HUSD" {...a11yProps(1)} />
-          <Tab label="BTC" {...a11yProps(2)} />
-          <Tab label="ETH" {...a11yProps(3)} />
-          <Tab label="HT" {...a11yProps(4)} />
-          <Tab label="ALTS" {...a11yProps(5)} />
-        </Tabs>
-      </AppBar>
-      <SwipeableViews
-        axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
-        index={value}
-        onChangeIndex={handleChangeIndex}
+return (
+  <div className={classes.root}>
+    <AppBar position="static" color="default">
+      <Tabs
+        value={value}
+        onChange={handleChange}
+        indicatorColor="primary"
+        textColor="primary"
+        variant="fullWidth"
+        aria-label="full width tabs example"
       >
-        <TabPanel value={value} index={0} dir={theme.direction}>
-          <div>
-            <EnhancedTable
-              columns={headCells}
-              rows={markets}
-              pagination={false}
-            />
-          </div>
-        </TabPanel>
-        <TabPanel value={value} index={1} dir={theme.direction}>
+        <Tab label="USDT" {...a11yProps(0)} />
+        <Tab label="HUSD" {...a11yProps(1)} />
+        <Tab label="BTC" {...a11yProps(2)} />
+        <Tab label="ETH" {...a11yProps(3)} />
+        <Tab label="HT" {...a11yProps(4)} />
+        <Tab label="ALTS" {...a11yProps(5)} />
+      </Tabs>
+    </AppBar>
+    <SwipeableViews
+      axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
+      index={value}
+      onChangeIndex={handleChangeIndex}
+    >
+      <TabPanel value={value} index={0} dir={theme.direction}>
+        <div>
           <EnhancedTable
             columns={headCells}
-            rows={[]}
+            rows={getMarkets('usdt')}
             pagination={false}
           />
-        </TabPanel>
-        <TabPanel value={value} index={2} dir={theme.direction}>
-          <EnhancedTable
-            columns={headCells}
-            rows={[]}
-            pagination={false}
-          />
-        </TabPanel>
-        <TabPanel value={value} index={3} dir={theme.direction}>
-          <EnhancedTable
-            columns={headCells}
-            rows={[]}
-            pagination={false}
-          />
-        </TabPanel>
-        <TabPanel value={value} index={4} dir={theme.direction}>
-          <EnhancedTable
-            columns={headCells}
-            rows={[]}
-            pagination={false}
-          />
-        </TabPanel>
-        <TabPanel value={value} index={5} dir={theme.direction}>
-          <EnhancedTable
-            columns={headCells}
-            rows={[]}
-            pagination={false}
-          />
-        </TabPanel>
-      </SwipeableViews>
-    </div>
-  );
+        </div>
+      </TabPanel>
+      <TabPanel value={value} index={1} dir={theme.direction}>
+        <EnhancedTable
+          columns={headCells}
+          rows={getMarkets('husd')}
+          pagination={false}
+        />
+      </TabPanel>
+      <TabPanel value={value} index={2} dir={theme.direction}>
+        <EnhancedTable
+          columns={headCells}
+          rows={getMarkets('btc')}
+          pagination={false}
+        />
+      </TabPanel>
+      <TabPanel value={value} index={3} dir={theme.direction}>
+        <EnhancedTable
+          columns={headCells}
+          rows={getMarkets('eth')}
+          pagination={false}
+        />
+      </TabPanel>
+      <TabPanel value={value} index={4} dir={theme.direction}>
+        <EnhancedTable
+          columns={headCells}
+          rows={getMarkets('ht')}
+          pagination={false}
+        />
+      </TabPanel>
+      <TabPanel value={value} index={5} dir={theme.direction}>
+        <EnhancedTable
+          columns={headCells}
+          rows={getMarkets('alts')}
+          pagination={false}
+        />
+      </TabPanel>
+    </SwipeableViews>
+  </div>
+);
 }
+
+const mapStateToProps = (state: any) => {
+  return {
+    markets: state.marketReducer.markets,
+    symbols: state.marketReducer.symbols,
+  };
+}
+
+const mapDispatchToProps = (dispatch: Function) => {
+  return {
+    fetchSymbols: (url: string) => dispatch(fetchSymbols(url))
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Markets);

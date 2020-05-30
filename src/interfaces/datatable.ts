@@ -7,6 +7,7 @@ export interface MarketData {
     amount: number;
     vol: number;
     count: number;
+    change: number;
 }
   
 export interface TableHeadCell {
